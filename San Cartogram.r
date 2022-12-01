@@ -178,3 +178,50 @@ these.variables <- c("pnhwht12", "pnhblk12", "phisp12", "pntv12", "pfb12", "pola
                      "pvac12", "pmulti12", "mrent12", "mhmval12", "p30old12", "p10yrs12", 
                      "p18und12", "p60up12", "p75up12", "pmar12", "pwds12", "pfhh12")
 
+Detail.names = c("Percent white, non-Hispanic", "Percent black, non-Hispanic", "Percent Hispanic", "Percent Native American race", "Percent foreign born", "Percent speaking other language at home, age 5 plus", "Percent with high school degree or less", "Percent with 4-year college degree or more", "Percent unemployed", "Percent female labor force participation", "Percent professional employees", "Percent manufacturing employees", "Percent veteran", "Percent self-employed", "Median HH income, total", "Per capita income", "Percent in poverty, total", "Percent owner-occupied units", "Percent vacant units", "Percent multi-family units", "Median rent", "Median home value", "Percent structures more than 30 years old", "Percent HH in neighborhood 10 years or less", "Percent 17 and under, total", "Percent 60 and older, total", "Percent 75 and older, total", "Percent currently married, not separated", "Percent widowed, divorced and separated", "Percent female-headed families with children")
+
+d1 <- san@data
+d2 <- select( d1, these.variables )
+d3 <- apply( d2, 2, scale )
+head( d3[,1:6] ) %>% pander()
+
+# library( mclust )
+set.seed( 1234 )
+fit <- Mclust( d3 )
+san$cluster <- as.factor( fit$classification )
+summary( fit )
+
+#plot(fit, what = "classification")
+
+# define the bounding box corners 
+bb <- st_bbox( c( xmin = -13055498, xmax = -13011238, 
+                  ymax = 3853073, ymin = 38171124 ), 
+               crs = st_crs("+init=epsg:3395"))
+
+#d2$cluster <- d2$cluster <- as.factor(paste0("Group-", fit$classification))
+
+df.pct <- sapply( d2, ntile, 100 )
+d3 <- as.data.frame( df.pct )
+d3$cluster <- as.factor( paste0("GROUP-",fit$classification) )
+
+stats <- 
+  d3 %>% 
+  group_by( cluster ) %>% 
+  summarise_each( funs(mean) )
+
+t <- data.frame( t(stats), stringsAsFactors=F )
+names(t) <- paste0( "GROUP.", 1:6 ) 
+t <- t[-1,]
+
+for( i in 1:6 )
+{
+  z <- t[,i]
+  plot( rep(1,30), 1:30, bty="n", xlim=c(-75,100), 
+        type="n", xaxt="n", yaxt="n",
+        xlab="Percentile", ylab="",
+        main=paste("GROUP",i) )
+  abline( v=seq(0,100,25), lty=3, lwd=1.5, col="gray90" )
+  segments( y0=1:30, x0=0, x1=100, col="gray70", lwd=2 )
+  text( -0.2, 1:30, data.dictionary$VARIABLE[-1], cex=0.85, pos=2 )
+  points( z, 1:30, pch=19, col="firebrick", cex=1.5 )
+  axis( side=1, at=c(0,50,100), col.axis="gray", col="gray" )
