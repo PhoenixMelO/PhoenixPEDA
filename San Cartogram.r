@@ -1,4 +1,4 @@
-```{r include=FALSE}
+
 # LOAD PACKAGES
 
 library(cartogram)     #spatial maps w/ tract size bias reduction
@@ -27,9 +27,9 @@ library(tidycensus)
 library(tigris)
 library(tmap)          #maps
 library(viridis)       #maps
-```
 
-```{r include=FALSE} 
+
+
 # LOAD Census Key
 readRenviron("~/.Renviron")
 # Data Steps
@@ -66,9 +66,9 @@ san2 <- san1[ ! st_is_empty( san1 ) , ]
 # convert sf map object to an sp version
 san.sp <- as_Spatial(san2)
 #plot(san.sp)
-```
 
-```{r, include=FALSE}
+
+
 # project map and remove empty tracts
 san.sp <- spTransform( san.sp, CRS("+init=epsg:3395"))
 san.sp <- san.sp[ san.sp$POP != 0 & (! is.na( san.sp$POP )) , ]
@@ -77,17 +77,17 @@ san.sp <- san.sp[ san.sp$POP != 0 & (! is.na( san.sp$POP )) , ]
 san.sp$pop.w <- san.sp$POP / 9000 # max(msp.sp$POP)   # standardizes it to max of 1.5
 san <- cartogram_dorling( x=san.sp, weight="pop.w", k=0.03 )
 #plot( san )
-```
 
-```{r, include=FALSE}
+
+
 tm_shape( san ) + 
 tm_polygons( size="POP", col="hinc12", n=7, style="quantile", palette="Spectral" ) 
-```
 
-```{r, include=FALSE}
+
+
 bb <- st_bbox(c(xmin= -13055498, xmax= -13011238, ymax= 3853073, ymin= 3817112), crs = st_crs("+init=epsg:3395"))
 
 tm_shape( san, bbox = bb ) + 
   tm_polygons( col="hinc12", n=7, style="quantile", palette="Spectral" ) +
   tm_layout("Dorling Cartogram", title.position = c("right", "top"))
-```
+
