@@ -1,0 +1,71 @@
+---
+title: "Models of Neighborhood Change in San Diego"
+author: "Melanie Phoenix"
+date: "2022-11-30"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: spacelab
+    source: embed
+    smart: false 
+runtime: shiny
+---
+
+```{r include=FALSE}
+# LOAD PACKAGES
+
+library(cartogram)     #spatial maps w/ tract size bias reduction
+library(corrplot)
+library(dplyr)         #data wrangling
+library(DT)            #formatting output
+library(flexdashboard) #dashboard layout, widgets, and uploading
+library(geojsonio)     #maps
+library(ggmap)         #maps
+library(ggplot2)       #graphing 
+library(ggthemes)      #nice formats for ggplots
+library(here)
+library(import)
+library(knitr)         #formatting output
+library(leaflet)       #maps
+library(magrittr)
+library(maptools)      #spatial object manipulation
+library(mclust)        #cluster analysis 
+library(pals)          #maps
+library(pander)        #formatting output
+library(rgdal)         #maps
+library(rgeos)         #Interface to open-source geometry engine (GEOS)
+library(rsconnect)     #dashboard layout, widgets, and uploading
+library(sf)            #maps
+library(shiny)         #dashboard layout, widgets, and uploading
+library(sp)            #maps
+library(stargazer)     #formatting output
+library(tidycensus)
+library(tidyverse)
+library(tigris)
+library(tmap)          #maps
+library(viridis)       #maps
+```
+
+```{r include=FALSE}
+readRenviron("~/.Renviron")
+```
+
+```{r}
+# Data Steps
+#load dorling cartogram from github
+import::here("san",
+             "san.sp",
+             # notice the use of here::here() that points to the .R file
+             # where all these R objects are created
+             .from = here::here("San Cartogram.r"),
+             .character_only = TRUE)
+```
+
+
+
+
+Community Demographics  
+=====================================  
+
+Inputs {.sidebar}
+-------------------------------------
+
