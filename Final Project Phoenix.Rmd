@@ -1,12 +1,8 @@
 ---
-title: "Models of Neighborhood Change in San Diego"
+title: "Final Project"
 author: "Melanie Phoenix"
-date: "2022-11-30"
-output: 
-  flexdashboard::flex_dashboard:
-    theme: spacelab
-    source: embed
-    smart: false 
+date: "2022-12-01"
+output: html_document
 runtime: shiny
 ---
 
@@ -45,27 +41,167 @@ library(tmap)          #maps
 library(viridis)       #maps
 ```
 
-```{r include=FALSE}
+# Dorling Cartogram
+
+## Load Census Key
+```{r}
+# LOAD Census Key
 readRenviron("~/.Renviron")
 ```
 
+## Select SAN DIEGO
 ```{r}
 # Data Steps
-#load dorling cartogram from github
-import::here("san",
-             "san.sp",
-             # notice the use of here::here() that points to the .R file
-             # where all these R objects are created
-             .from = here::here("San Cartogram.r"),
-             .character_only = TRUE)
+# Step 1 - Select San Diego
+crosswalk <- read.csv( "https://raw.githubusercontent.com/DS4PS/cpp-529-master/master/data/cbsatocountycrosswalk.csv",  stringsAsFactors=F, colClasses="character" )
+# search for city names by strings, use the ^ anchor for "begins with" 
+# Make sure that you use all caps for the city search
+grep( "^SAN ", crosswalk$msaname, value=TRUE ) 
+# Step 2 - Select county fips
+# Select all of your county fips. To use them in the TidyCensus package you will need to split the state and county:
+```
+
+## Select FIPS
+```{r}
+these.san <- crosswalk$msaname == "SAN DIEGO, CA" 
+these.fips <- crosswalk$fipscounty[ these.san ]
+these.fips <- na.omit( these.fips )
+state.fips <- substr( these.fips, 1, 2 )
+county.fips <- substr( these.fips, 3, 5 )
+# Step 3 - Create Dorling 
+# To create a Dorling cartogram we need a shapefile and a population count. We can get both through the Census download that includes simple features.
+```
+
+## Add population count 
+```{r}
+#Do not add zeros to the state number 
+san.pop <-
+get_acs( geography = "tract", variables = "B01003_001",
+         state = "06", county = county.fips[state.fips=="06"], geometry = TRUE ) %>% 
+         select( GEOID, estimate) %>%
+         rename( POP = estimate )
+```
+
+## Add Census Data to create shapefile
+```{r}
+URL <- "https://github.com/DS4PS/cpp-529-master/raw/master/data/ltdb_std_2010_sample.rds"
+census.dat <- readRDS(gzcon(url( URL )))
+# get a census tract shapefile
+# and add census data: 
+# can merge an sf object and data.frame
+san.pop$GEOID <- substring(san.pop$GEOID, 2)
+san1 <- merge( san.pop, census.dat, by.x="GEOID", by.y="tractid" )
+# make sure there are no empty polygons
+san2 <- san1[ ! st_is_empty( san1 ) , ]
+```
+
+## Data Dictionary
+```{r}
+data.dictionary <- 
+  structure(list(LABEL = c("tractid", "pnhwht12", "pnhblk12", "phisp12", "pntv12", "pfb12", "polang12", "phs12", "pcol12", "punemp12", "pflabf12", "pprof12", "pmanuf12", "pvet12", "psemp12", "hinc12", "incpc12", "ppov12", "pown12", "pvac12", "pmulti12", "mrent12", "mhmval12", "p30old12", "p10yrs12", "p18und12", "p60up12", "p75up12", "pmar12", "pwds12", "pfhh12"), VARIABLE = c("GEOID", "Percent white, non-Hispanic", "Percent black, non-Hispanic", "Percent Hispanic", "Percent Native American race", "Percent foreign born", "Percent speaking other language at home, age 5 plus", "Percent with high school degree or less", "Percent with 4-year college degree or more", "Percent unemployed", "Percent female labor force participation", "Percent professional employees", "Percent manufacturing employees", "Percent veteran", "Percent self-employed", "Median HH income, total", "Per capita income", "Percent in poverty, total", "Percent owner-occupied units", "Percent vacant units", "Percent multi-family units", "Median rent", "Median home value", "Percent structures more than 30 years old", "Percent HH in neighborhood 10 years or less", "Percent 17 and under, total", "Percent 60 and older, total", "Percent 75 and older, total", "Percent currently married, not separated", "Percent widowed, divorced and separated", "Percent female-headed families with children")), class = "data.frame", row.names = c(NA, -31L))
+```
+
+## Create Dorling Cartogram from shapefile
+```{r}
+# Step 4: Transform the Shapefile into A Dorling Cartogram
+# convert sf map object to an sp version
+san.sp <- as_Spatial(san2)
+#plot(san.sp)
+# project map and remove empty tracts
+san.sp <- spTransform( san.sp, CRS("+init=epsg:3395"))
+san.sp <- san.sp[ san.sp$POP != 0 & (! is.na( san.sp$POP )) , ]
+# convert census tract polygons to dorling cartogram
+# no idea why k=0.03 works, but it does - default is k=5
+san.sp$pop.w <- san.sp$POP / 9000 # max(msp.sp$POP)   # standardizes it to max of 1.5
+san_dorling <- cartogram_dorling( x=san.sp, weight="pop.w", k=0.03 )
+#plot( san )
+d1 <- san_dorling@data
+```
+
+```{r}
+bb <- st_bbox( c( xmin = -13055498, xmax = -13011238, 
+                  ymax = 3853073, ymin = 3817112 ), 
+               crs = st_crs("+init=epsg:3395"))
+tm_shape( san_dorling, bbox = bb ) + 
+  tm_polygons( size="POP", col="", n=7, style="quantile", palette="Spectral" ) +
+  tm_layout("San Diego Cartogram", title.position = c("right", "top"))
 ```
 
 
+# Cluster Analysis
+
+## Variable selection & prepare data for cluster
+```{r}
+keep.these <- c("pnhwht12", "pnhblk12", "phisp12", "pntv12", "pfb12", "polang12", 
+"phs12", "pcol12", "punemp12", "pflabf12", "pprof12", "pmanuf12", 
+"pvet12", "psemp12", "hinc12", "incpc12", "ppov12", "pown12", 
+"pvac12", "pmulti12", "mrent12", "mhmval12", "p30old12", "p10yrs12", 
+"p18und12", "p60up12", "p75up12", "pmar12", "pwds12", "pfhh12")
+
+#d2 <- select( d1, keep.these ) old way
+d2 <- d1 %>% select(all_of(keep.these))
+d3 <- apply( d2, 2, scale )
+```
+
+## 
+Peform Cluster Analysis
+```{r}
+# library( mclust )
+set.seed( 1234 )
+fit <- Mclust( d3 )
+san_dorling$cluster <- as.factor( fit$classification )
+summary( fit )
+```
+
+## Identifying Neighborhood Clusters
+```{r}
+df.pct <- sapply( d2, ntile, 100 )
+d4 <- as.data.frame( df.pct )
+d4$cluster <- as.factor( paste0("GROUP-",fit$classification) )
+num.groups <- length( unique( fit$classification ) )
+stats <- 
+d4 %>% 
+  group_by( cluster ) %>% 
+#  tibble::1st(mean, median)
+#  list(~mean., trim = .2), ~ median(., na.rm = TRUE) didn't work 
+#  list(mean = mean, median = median)
+  summarise_each( funs(mean) ) # old way
+t <- data.frame(t(stats), stringsAsFactors = FALSE)
+#names(t) <- paste0("GROUP.", 1:num.groups)
+t <- t[-1,]
+
+colnames(t) <-  c("Native American Veterans","Girl Power","Black Girl Magic","Old School","Habla en Espano","Cali Life")
+```
 
 
-Community Demographics  
-=====================================  
+```{r}
+for( i in 1:num.groups )
+{
+  z <- t[,i]
+  plot( rep(1,30), 1:30, bty="n", xlim=c(-75,100), 
+        type="n", xaxt="n", yaxt="n",
+        xlab="Percentile", ylab="", 
+        main=paste("GROUP", i))
+  abline( v=seq(0,100,25), lty=3, lwd=1.5, col="gray90" )
+  segments( y0=1:30, x0=0, x1=100, col="gray70", lwd=2 )
+  text( -0.2, 1:30, data.dictionary$VARIABLE[-1], cex=0.85, pos=2 )
+  points( z, 1:30, pch=19, col="firebrick", cex=1.5 )
+  axis( side=1, at=c(0,50,100), col.axis="gray", col="gray" )
+}
 
-Inputs {.sidebar}
--------------------------------------
+
+```
+
+## Write to File
+```{r, include=FALSE}
+# data frame and polygon ID standardization in case a tract was dropped and IDs don't match
+row.ids <- sapply( slot( san_dorling, "polygons" ), function(x) slot( x, "ID" ) )
+row.names( san_dorling ) <- row.ids
+
+# project to standard lat-lon coordinate system 
+san_dorling <- spTransform( san_dorling, CRS("+proj=longlat +datum=WGS84") )
+
+# write to file 
+geojson_write( san_dorling, file="san.geojson", geometry="polygon" )
+```
 
