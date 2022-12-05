@@ -35,45 +35,45 @@ library(viridis)       #maps
 ```{r, include=FALSE}
 # DATA STEPS
 # from local file path
-san <- geojson_read( "san.geojson", what="sp" )
-# reproject the map 
-san2 <- spTransform( san, CRS("+init=epsg:3395") )
-# convert the sp map format to 
+san <- geojson_read("san.geojson", what = "sp")
+# reproject the map
+san2 <- spTransform(san, CRS("+init=epsg:3395"))
+# convert the sp map format to
 # an sf (simple features) format:
 # ggmap requires the sf format
-san.sf <- st_as_sf( san2 )
+san.sf <- st_as_sf(san2)
 # separate out the data frame from the map
-sdd <- as.data.frame( san.sf )
+sdd <- as.data.frame(san.sf)
 URL1 <- "https://github.com/DS4PS/cpp-529-fall-2020/raw/main/LABS/data/rodeo/LTDB-2000.rds"
-d5 <- readRDS( gzcon( url( URL1 ) ) )
+d5 <- readRDS(gzcon(url(URL1)))
 #
 URL2 <- "https://github.com/DS4PS/cpp-529-fall-2020/raw/main/LABS/data/rodeo/LTDB-2010.rds"
-d6 <- readRDS( gzcon( url( URL2 ) ) )
+d6 <- readRDS(gzcon(url(URL2)))
 #
 URLmd <- "https://github.com/DS4PS/cpp-529-fall-2020/raw/main/LABS/data/rodeo/LTDB-META-DATA.rds"
-md <- readRDS( gzcon( url( URLmd ) ) )
+md <- readRDS(gzcon(url(URLmd)))
 #
-d5 <- select( d5, - year )
-d6 <- select( d6, - year )
+d5 <- select(d5, - year)
+d6 <- select(d6, - year)
 #
-d <- merge( d5, d6, by="tractid" )
-d <- merge( d, md, by="tractid" )
+d <- merge(d5, d6, by = "tractid")
+d <- merge(d, md, by = "tractid")
 #
 #table( d$urban )
 #
 #d <- filter( d, urban == "urban" )
 #
-d <- select( d, tractid, 
-             mhmval00, mhmval12, 
-             hinc00, 
+d <- select(d, tractid,
+             mhmval00, mhmval12,
+             hinc00,
              hu00, vac00, own00, rent00, h30old00,
-             empclf00, clf00, unemp00, prof00,  
+             empclf00, clf00, unemp00, prof00,
              dpov00, npov00,
-             ag25up00, hs00, col00, 
+             ag25up00, hs00, col00,
              pop00.x, nhwht00, nhblk00, hisp00, asian00,
-             cbsa, cbsaname )
+             cbsa, cbsaname)
 
-#      
+#
 these.variables <- c( "pnhwht12", "pnhblk12", "phisp12", "pntv12", "pfb12", "polang12", "phs12", "pcol12", 
                      "punemp12", "pflabf12", "pprof12", "pmanuf12", "pvet12", "psemp12", "hinc12", "incpc12", 
                      "ppov12", "pown12", "pvac12", "pmulti12", "mrent12", "mhmval12", "p30old12", "p10yrs12", 
@@ -95,8 +95,8 @@ names(these.variables) <- c("Caucasian %", "African American %", "Hispanic %", "
                             "Med Home Value", "30+ yr old Homes %", "HH under 10yr Homes %", "Below 17yrs %", 
                             "60+ yrs %", "75+ yrs %", "Married %", "Separated %", "Female HH %")
 #
-# adjust 2000 home values for inflation 
-mhv.00 <- d$mhmval00 * 1.28855  
+# adjust 2000 home values for inflation
+mhv.00 <- d$mhmval00 * 1.28855
 mhv.10 <- d$mhmval12
 # change in MHV in dollars
 mhv.change <- mhv.10 - mhv.00
@@ -107,20 +107,20 @@ mhv.change <- mhv.10 - mhv.00
 # $1,000 are outliers
 #mhv.00[ mhv.00 < 1000 ] <- NA
 # change in MHV in percent
-mhv.growth <- 100 * ( mhv.change / mhv.00 )
+mhv.growth <- 100 * (mhv.change / mhv.00)
 #
 d$mhv.00 <- mhv.00
 d$mhv.10 <- mhv.10
 d$mhv.change <- mhv.change
-d$mhv.growth <- mhv.growth 
+d$mhv.growth <- mhv.growth
 # geoid-01 is the hypothetical name of tract ID in the shapefile
 # geoid-02 is the hypothetical name of tract ID in the census dataset
-# dorling must be an sp shapefile 
+# dorling must be an sp shapefile
 dd.URL <- "https://raw.githubusercontent.com/DS4PS/cpp-529-master/master/data/data-dictionary.csv"
-data.dictionary <- read.csv( dd.URL, stringsAsFactors=F ) 
+data.dictionary <- read.csv(dd.URL, stringsAsFactors=F)
 # data.dictionary must have "LABEL" for var name and "VARIABLE" for description
-data.dictionary <- data.dictionary[ -1 , ] # drop the original column names
-#      
+data.dictionary <- data.dictionary[-1, ] # drop the original column names
+#
 data.label <- data.dictionary[ data.dictionary$LABEL %in% these.variables , ]
 value <- data.label$LABEL
 dd.name <- data.label$VARIABLE
@@ -130,8 +130,8 @@ xnames <- dd.name
 names(xnames) <- value
 #
 #
-bb <- st_bbox( c( xmin = -13055498, xmax = -13011238, 
-                  ymax = 3853073, ymin = 3817112 ), 
+bb <- st_bbox(c(xmin = -13055498, xmax = -13011238,
+                  ymax = 3853073, ymin = 3817112),
                crs = st_crs("+init=epsg:3395"))
 MHV_Values <- c("mhv.00", "mhv.10", "mhv.change", "mhv.growth")
 MHV_Labels <- c("Median Home Value 2000","Median Home Value 2010","Value Change 2000-2010","Growth in Home Value")
@@ -170,12 +170,12 @@ Inputs {.sidebar}
 -------------------------------------
 
 ```{r}
-radioButtons( inputId="demographics", 
+radioButtons( inputId = "demographics",
               label = h3("Census Variables"),
-              choices =  these.variables, 
+              choices =  these.variables,
 #              choiceNames= short.names,
 #              choiceValues= these.variables,
-              selected="punemp12")
+              selected = "punemp12")
 ```
 
 Row {.tabset}
@@ -187,18 +187,17 @@ Row {.tabset}
 ```{r}
 renderPlot({
 
-# split the selected variable into deciles 
-  
-get_data <- 
+# split the selected variable into deciles
+get_data <-
   reactive({
-             san.sf <- 
-             san.sf %>% 
-             mutate( q = ntile( get(input$demographics), 10 ) )  
+             san.sf <-
+             san.sf %>%
+             mutate(q = ntile( get(input$demographics), 10))
           })
 
   
-ggplot( get_data() ) +
-    geom_sf( aes( fill = q ), color=NA ) +
+ggplot(get_data() ) +
+    geom_sf(aes( fill = q ), color=NA ) +
     coord_sf( datum=NA ) +
     labs( title = paste0( "Choropleth of Select Demographics: ", toupper(names(these.variables[which(input$demographics == these.variables)]))),
           caption = "Source: Harmonized Census Files",
